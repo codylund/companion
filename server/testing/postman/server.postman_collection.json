@@ -1,0 +1,182 @@
+{
+	"info": {
+		"name": "server",
+		"_postman_id": "7cda19aa-1e51-b340-1ed2-dd8c68feffd9",
+		"description": "",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "register",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/x-www-form-urlencoded"
+					}
+				],
+				"body": {
+					"mode": "urlencoded",
+					"urlencoded": [
+						{
+							"key": "alias",
+							"value": "codyj123",
+							"description": "",
+							"type": "text"
+						},
+						{
+							"key": "password",
+							"value": "abc123",
+							"description": "",
+							"type": "text"
+						},
+						{
+							"key": "template",
+							"value": "1f35bb343ead32801",
+							"description": "",
+							"type": "text"
+						},
+						{
+							"key": "name",
+							"value": "Cody Lund",
+							"description": "",
+							"type": "text"
+						},
+						{
+							"key": "phone",
+							"value": "(651) 488-8888",
+							"description": "",
+							"type": "text"
+						},
+						{
+							"key": "birthday",
+							"value": "1/1/2017",
+							"description": "",
+							"type": "text"
+						},
+						{
+							"key": "address",
+							"value": "123 Fake St., Minneapolis, MN",
+							"description": "",
+							"type": "text"
+						},
+						{
+							"key": "code",
+							"value": "6969",
+							"description": "",
+							"type": "text"
+						}
+					]
+				},
+				"url": {
+					"raw": "http://localhost:8080/register",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"register"
+					]
+				},
+				"description": ""
+			},
+			"response": []
+		},
+		{
+			"name": "signin",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/x-www-form-urlencoded"
+					}
+				],
+				"body": {
+					"mode": "urlencoded",
+					"urlencoded": [
+						{
+							"key": "alias",
+							"value": "me",
+							"description": "",
+							"type": "text"
+						},
+						{
+							"key": "password",
+							"value": "6969",
+							"description": "",
+							"type": "text"
+						},
+						{
+							"key": "scan",
+							"value": "123456789",
+							"description": "",
+							"type": "text"
+						}
+					]
+				},
+				"url": {
+					"raw": "http://localhost:8080/signin",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"signin"
+					]
+				},
+				"description": ""
+			},
+			"response": []
+		},
+		{
+			"name": "share",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6Im1lIiwiaWF0IjoxNTE5MDU5NjA3LCJleHAiOjE1MTkwNjMyMDd9.eU9jJF26cFizRRVImBVAezGR3vx-gD70RlF74kY5IPQ"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/x-www-form-urlencoded"
+					}
+				],
+				"body": {
+					"mode": "urlencoded",
+					"urlencoded": [
+						{
+							"key": "targetAlias",
+							"value": "pizzalover420",
+							"description": "",
+							"type": "text"
+						},
+						{
+							"key": "attributeId",
+							"value": "abc123456789",
+							"description": "",
+							"type": "text"
+						}
+					]
+				},
+				"url": {
+					"raw": "http://localhost:8080/share",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"share"
+					]
+				},
+				"description": ""
+			},
+			"response": []
+		}
+	]
+}

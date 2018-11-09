@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Where's Cody?</title>
+    <meta name="viewport" content="initial-scale=1.0">
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css?family=Roboto" rel="stylesheet">
+    <script src="mapStyle.js"></script>
+
+    <!-- Core CSS file -->
+    <link rel="stylesheet" href="photoswipe.css">
+
+    <!-- Skin CSS file (styling of UI - buttons, caption, etc.)
+         In the folder of skin CSS file there are also:
+         - .png and .svg icons sprite,
+         - preloader.gif (for browsers that do not support CSS animations) -->
+    <link rel="stylesheet" href="default-skin/default-skin.css">
+
+    <!-- Core JS file -->
+    <script src="photoswipe.min.js"></script>
+
+    <!-- UI JS file -->
+    <script src="photoswipe-ui-default.min.js"></script>
+
+  </head>
+  <body onload="dynamicSizing();" onresize="dynamicSizing()">
+    <!-- Root element of PhotoSwipe. Must have class pswp. -->
+    <div class="pswp" tabindex="-1" role="dialog" aria-hidden="true">
+
+        <!-- Background of PhotoSwipe.
+             It's a separate element as animating opacity is faster than rgba(). -->
+        <div class="pswp__bg"></div>
+
+        <!-- Slides wrapper with overflow:hidden. -->
+        <div class="pswp__scroll-wrap">
+
+            <!-- Container that holds slides.
+                PhotoSwipe keeps only 3 of them in the DOM to save memory.
+                Don't modify these 3 pswp__item elements, data is added later on. -->
+            <div class="pswp__container">
+                <div class="pswp__item"></div>
+                <div class="pswp__item"></div>
+                <div class="pswp__item"></div>
+            </div>
+
+            <!-- Default (PhotoSwipeUI_Default) interface on top of sliding area. Can be changed. -->
+            <div class="pswp__ui pswp__ui--hidden">
+
+                <div class="pswp__top-bar">
+
+                    <!--  Controls are self-explanatory. Order can be changed. -->
+
+                    <div class="pswp__counter"></div>
+
+                    <button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+
+                    <button class="pswp__button pswp__button--share" title="Share"></button>
+
+                    <button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+
+                    <button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button>
+
+                    <!-- Preloader demo http://codepen.io/dimsemenov/pen/yyBWoR -->
+                    <!-- element will get class pswp__preloader - active when preloader is running -->
+                    <div class="pswp__preloader">
+                        <div class="pswp__preloader__icn">
+                          <div class="pswp__preloader__cut">
+                            <div class="pswp__preloader__donut"></div>
+                          </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap">
+                    <div class="pswp__share-tooltip"></div>
+                </div>
+
+                <button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+                </button>
+
+                <button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)">
+                </button>
+
+                <div class="pswp__caption">
+                    <div class="pswp__caption__center"></div>
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <div id="checkpoint-stage">
+      <div id="checkpoint-spotlight-container">
+        <div id="checkpoint-spotlight">
+          <p id="text" style="color: white"></p>
+          <img id="pic"/>
+        </div>
+      </div>
+    </div>
+    <div id="header-container">
+      <div id="header">
+        <div class="arrow-container" id="arrow-container-left">
+          <div class="arrow" id="left-arrow" onclick="showPreviousCheckpoint()"></div>
+        </div>
+        <div class="arrow-container" id="arrow-container-right">
+          <div class="arrow" id="right-arrow" onclick="showNextCheckpoint()"></div>
+        </div>
+        <div id="last-ping">
+          <h4 id="checkpoint-number"></h4>
+          <h3 id="checkpoint-timestamp"></h3>
+          <h3 id="checkpoint-latlng"></h3>
+        </div>
+      </div>
+    </div>
+    <div id="map-container">
+      <div id="current-location-container"></div>
+      <div id="map"></div>
+    </div>
+    <script>
+      var map;
+      var mapFocusEnabled = false;
+      var activeCheckpointIndex;
+      var last_loc;
+      var last_time;
+      var cur_loc;
+      var checkpoints = [];
+
+      function dynamicSizing() {
+        // offset the map by height of last ping header
+        var headerHeight = document.getElementById("header").offsetHeight;
+        document.getElementById("map-container").style.top = headerHeight + "px";
+
+        hideOrShowArrows();
+      }
+
+      function hideHeader() {
+        document.getElementById("header-container").style.display = "none";
+      }
+
+      function showHeader() {
+        document.getElementById("header-container").style.display = "block";
+      }
+
+      function showCheckpointStage() {
+        if (activeCheckpointIndex < checkpoints.length) {
+          console.log("Showing checkpoint stage.");
+          document.getElementById("checkpoint-stage").style.display = "block";
+          document.getElementById("map-container").style.bottom = "50%";
+          document.getElementById("checkpoint-stage").style.top = "50%";
+          document.getElementById("checkpoint-stage").style.maxHeight = "100%";
+          startBounce(checkpoints[activeCheckpointIndex]);
+        }
+      }
+
+      function updateCheckpointInfo(label, timestamp, location, text, pic) {
+        console.log("Updating checkpoint info.");
+        document.getElementById("checkpoint-number").innerText = label;
+        document.getElementById("checkpoint-timestamp").innerText = timestamp;
+        document.getElementById("checkpoint-latlng").innerText = "(" + location.lat + ", " + location.lng + ")";
+        document.getElementById("text").innerHTML = text;
+        document.getElementById("pic").src = pic;
+        document.getElementById("pic").onload = function () {
+          document.getElementById("pic").onclick = function() {
+            openPhotoSwipe(pic, this.width, this.height);
+          };
+        };
+      }
+
+      function hideCheckpointStage() {
+        console.log("Hiding checkpoint stage.")
+        document.getElementById("checkpoint-stage").style.display = "none";
+        document.getElementById("map-container").style.bottom = "0";
+        stopBounce(checkpoints[activeCheckpointIndex]);
+      }
+
+      function showNextCheckpoint() {
+        if (activeCheckpointIndex + 1 < checkpoints.length) {
+          console.log("Showing next checkpoint: " + (checkpoints.length - activeCheckpointIndex) + " of " + checkpoints.length);
+          stopBounce(checkpoints[activeCheckpointIndex++]);
+          google.maps.event.trigger(checkpoints[activeCheckpointIndex], 'click');
+          cur_loc = checkpoints[activeCheckpointIndex].getPosition();
+        } else if (activeCheckpointIndex + 1 == checkpoints.length) {
+          console.log("Showing current location.")
+          stopBounce(checkpoints[activeCheckpointIndex++]);
+          updateCheckpointInfo("Last Known Location", last_time, last_loc);
+          hideCheckpointStage();
+          centerMapOn(last_loc.lat, last_loc.lng);
+          map.setZoom(13);
+          cur_loc = last_loc;
+        }
+        hideOrShowArrows();
+      }
+
+      function showPreviousCheckpoint() {
+        if (activeCheckpointIndex - 1 >= 0) {
+          console.log("Showing previous checkpoint: " + (checkpoints.length - activeCheckpointIndex) + " of " + checkpoints.length);
+          stopBounce(checkpoints[activeCheckpointIndex--]);
+          google.maps.event.trigger(checkpoints[activeCheckpointIndex], 'click');
+          cur_loc = checkpoints[activeCheckpointIndex].getPosition();
+        }
+        hideOrShowArrows();
+      }
+
+      function hideOrShowArrows() {
+        // hide or show the right (i.e. back) arrow
+        if (activeCheckpointIndex > 0) {
+          document.getElementById("arrow-container-left").style.display = "inline-block";
+        } else {
+          document.getElementById("arrow-container-left").style.display = "none";
+        }
+
+        // hide or show the left (i.e. forward) arrow
+        if (activeCheckpointIndex < checkpoints.length) {
+          document.getElementById("arrow-container-right").style.display = "inline-block";
+        } else {
+          document.getElementById("arrow-container-right").style.display = "none";
+        }
+      }
+
+      function toggleBounce(marker) {
+        if (marker) {
+          if (marker.getAnimation() !== null && marker.getAnimation() !== google.maps.Animation.DROP) {
+            marker.setAnimation(null);
+          } else {
+            marker.setAnimation(google.maps.Animation.BOUNCE);
+          }
+        }
+      }
+
+      function stopBounce(marker) {
+        if (marker)
+          marker.setAnimation(null);
+      }
+
+      function startBounce(marker) {
+        if (marker)
+          marker.setAnimation(google.maps.Animation.BOUNCE);
+      }
+
+      function initMap() {
+
+        var styledMapType = new google.maps.StyledMapType(style);
+
+        map = new google.maps.Map(document.getElementById('map'), {
+          center: {lat: {{last_lat}}, lng: {{last_lng}}},
+          zoom: 13,
+          mapTypeControlOptions: {
+            mapTypeIds: ['roadmap', 'satellite', 'hybrid', 'terrain', 'styled_map']
+          },
+          zoomControl: true,
+          mapTypeControl: false,
+          scaleControl: true,
+          streetViewControl: false,
+          rotateControl: false,
+          fullscreenControl: false,
+          disableDoubleClickZoom: true,
+          scrollwheel: false
+        });
+
+        map.mapTypes.set('styled_map', styledMapType);
+        map.setMapTypeId('styled_map');
+
+        map.addListener('dragstart', function() {
+          //hideHeader();
+          //hideCheckpointStage();
+          //dynamicSizing();
+        });
+
+        map.addListener('dblclick', function() {
+          if (mapFocusEnabled) {
+            showHeader();
+            showCheckpointStage();
+            centerMapOn(cur_loc.lat, cur_loc.lng);
+          } else {
+            hideHeader();
+            hideCheckpointStage();
+          }
+          dynamicSizing();
+          mapFocusEnabled = !mapFocusEnabled;
+        })
+
+        map.addListener('dragend', function() {
+          //showHeader();
+          //showCheckpointStage();
+          //dynamicSizing();
+          if (!mapFocusEnabled)
+            map.panTo(cur_loc);
+        });
+
+        // Add checkpoints to the map.
+        {{#checkpoints}}
+          checkpoints.push(new google.maps.Marker({
+            position: {lat: {{lat}}, lng: {{lng}}},
+            map: map,
+            animation: google.maps.Animation.DROP
+          }));
+
+          checkpoints[checkpoints.length-1].addListener('click', function() {
+            // Data for this checkpoint
+            let label = "Checkpoint #" + ({{label}} + 1);
+            let timestamp = "{{time}}";
+            let location = {lat: {{lat}}, lng: {{lng}}};
+            let text = '{{text}}';
+            let pic = '{{pic}}';
+            console.log(text);
+
+            // Update map related stuff
+            cur_loc = location;
+            centerMapOn(location.lat, location.lng);
+            stopBounce(checkpoints[activeCheckpointIndex]);
+            activeCheckpointIndex = {{label}};
+            startBounce(checkpoints[activeCheckpointIndex]);
+            map.setZoom(13);
+
+            // Depending on which checkpoint we are showing, we may need to show/hide arrows.
+            hideOrShowArrows();
+
+            // Update the checkpoint stage
+            updateCheckpointInfo(label, timestamp, location, text, pic);
+            showCheckpointStage();
+            showHeader();
+            dynamicSizing();
+            mapFocusEnabled = false;
+          });
+        {{/checkpoints}}
+
+        activeCheckpointIndex = checkpoints.length;
+
+        last_loc = {lat: {{last_lat}},lng: {{last_lng}}};
+        last_time = "{{last_time}}";
+
+        cur_loc = last_loc;
+
+        updateCheckpointInfo("Last Known Location", last_time, last_loc);
+        showCheckpointStage();
+
+        new google.maps.Circle({
+          strokeColor: '#FF0000',
+          strokeOpacity: 0.8,
+          strokeWeight: 2,
+          fillColor: '#FF0000',
+          fillOpacity: 0.35,
+          map: map,
+          center: last_loc,
+          radius: 50
+        });
+
+        new google.maps.Circle({
+          fillColor: '#000000',
+          fillOpacity: 1,
+          map: map,
+          center: last_loc,
+          radius: 5
+        });
+
+        document.getElementById("current-location-container").onclick = function() {
+          cur_loc = last_loc;
+          map.setZoom(13);
+          centerMapOn(last_loc.lat, last_loc.lng);
+          stopBounce(checkpoints[activeCheckpointIndex]);
+          activeCheckpointIndex = checkpoints.length;
+          updateCheckpointInfo("Last Known Location", last_time, last_loc);
+          hideOrShowArrows();
+          hideCheckpointStage();
+          dynamicSizing();
+        }
+
+      }
+
+      function openPhotoSwipe(url, w, h){
+        var pswpElement = document.querySelectorAll('.pswp')[0];
+
+        // build items array
+        var items = [
+            {
+                src: url,
+                w: w,
+                h: h
+            }
+        ];
+
+        // define options (if needed)
+        var options = {
+                 // history & focus options are disabled on CodePen
+            history: false,
+            focus: false,
+
+            showAnimationDuration: 0,
+            hideAnimationDuration: 0
+
+        };
+
+        var gallery = new PhotoSwipe( pswpElement, PhotoSwipeUI_Default, items, options);
+        gallery.init();
+      };
+
+      function clickMarker(marker) {
+        google.maps.event.trigger(marker, 'click');
+      }
+
+      function centerMapOn(lat, lng) {
+        map.panTo(new google.maps.LatLng(lat,lng));
+      }
+
+    </script>
+	<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDozkghn5sngW8IRoiwAUDLbgOfa2S_i14&libraries=places&callback=initMap" async defer></script>
+
+  </body>
+</html>
